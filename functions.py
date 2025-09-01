@@ -2,11 +2,14 @@ import numpy as np
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 
+
 def get_phasor(amplitude, frequency, duration, fs, phase_angle_degrees):
     t = np.linspace(0, duration, int(fs * duration), endpoint=False)
     radian_frequency = 2 * np.pi * frequency
     phase = radian_frequency * t + np.radians(phase_angle_degrees)
     return amplitude * np.exp(1j * phase)
+
+
 
 def animate_phasor(phasor, amplitude, duration):
 
@@ -79,18 +82,6 @@ def animate_phasor(phasor, amplitude, duration):
     interval = (duration * 1000) / total_frames  # Interval in milliseconds
     return FuncAnimation(fig, update, frames=total_frames, init_func=init, blit=True, repeat=False)
 
-# def get_fft_data(phasor, nfft):
-    
-#     sections = len(phasor) // nfft
-
-#     strided_signal = np.lib.stride_tricks.as_strided(
-#         phasor,
-#         shape=(sections, nfft),
-#         strides=(phasor.strides[0] * nfft, phasor.strides[0])
-#     ).astype(np.complex128)
-
-#     return np.fft.fft(strided_signal, n=nfft, axis=1)
-
 def get_fft_data(phasor, nfft):
     
     # Calculate number of full sections
@@ -100,7 +91,8 @@ def get_fft_data(phasor, nfft):
     strided_signal = np.lib.stride_tricks.as_strided(
         phasor,
         shape=(sections, nfft),
-        strides=(phasor.strides[0] * nfft, phasor.strides[0])
+        strides=(phasor.strides[0] * nfft, phasor.strides[0]),
+        writeable=False
     )
 
     # Perform FFT along the second axis
