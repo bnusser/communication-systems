@@ -9,8 +9,6 @@ def get_phasor(amplitude, frequency, duration, fs, phase_angle_degrees):
     phase = radian_frequency * t + np.radians(phase_angle_degrees)
     return amplitude * np.exp(1j * phase)
 
-
-
 def animate_phasor(phasor, amplitude, duration):
 
     """
@@ -139,4 +137,73 @@ def exponential_fourier_series(signal, T, n_harmonics, t_reconstruct):
     for n in range(-n_harmonics, n_harmonics + 1):
         reconstructed_signal += c_n[n + n_harmonics] * np.exp(1j * n * omega_0 * t_reconstruct)
     
-    return c_n, reconstructed_signal.real    
+    return c_n, reconstructed_signal.real
+
+def get_fourier_series_approximation(f, x, L, r=None, period_start=None, verbose=True):
+    """
+    Compute the Fourier series approximation of a periodic function.
+
+    Parameters:
+        f (np.ndarray): Signal samples (must be periodic with period L).
+        x (np.ndarray): Sample points (must be uniformly spaced).
+        L (float): Period of the function.
+        r (int, optional): Number of harmonics. If None, set to Nyquist limit.
+        period_start (float, optional): Start of the period in x. If None, auto-detects.
+        verbose (bool): If True, print Fourier coefficients during calculation.
+
+    Returns:
+        fFS (np.ndarray): Fourier series approximation over all x.
+    """
+    x = np.asarray(x)
+    f = np.asarray(f)
+
+    # Check for uniform sampling
+    dxs = np.diff(x)
+    if not np.allclose(dxs, dxs[0], rtol=1e-6, atol=1e-10):
+        raise ValueError("x must be uniformly sampled.")
+
+    dx = dxs[0]
+
+    # Auto-detect period start if not provided
+    if period_start is None:
+        x0 = x[0]
+        period_mask = (x >= x0) & (x < x0 + L)
+        if np.sum(period_mask) < 2:
+            raise ValueError("Not enough samples for one period.")
+        x_period = x[period_mask]
+        f_period = f[period_mask]
+    else:
+        period_mask = (x >= period_start) & (x < period_start + L)
+        if np.sum(period_mask) < 2:
+            raise ValueError("Not enough samples for one period at the specified start.")
+        x_period = x[period_mask]
+        f_period = f[period_mask]
+
+    dx = x_period[1] - x_period[0]
+
+    # Set number of harmonics if not provided
+    if r is None:
+        r = int(L / (2 * dx)) - 1
+
+    if verbose:
+        print(f"Using r = {r} harmonics")
+
+    # DC term
+    A0 = np.sum(f_period) * dx / L
+    fFS = A0 * np.ones_like(f)
+
+    if verbose:
+        print(f"A0 (DC term) = {A0:.5f}")
+
+    # Harmonics
+    for k in range(1, r + 1):
+        Ak = np.sum(f_period * np.cos(2 * np.pi * k * x_period / L)) * dx * 2 / L
+        Bk = np.sum(f_period * np.sin(2 * np.pi * k * x_period / L)) * dx * 2 / L
+        fFS += Ak * np.cos(2 * np.pi * k * x / L) + Bk * np.sin(2 * np.pi * k * x / L)
+
+        # Print selectively
+        if verbose:
+            if k <= 10 or k % 50 == 0 or k == r:
+                print(f"k={k:3d}: Ak = {Ak:+.5f}, Bk = {Bk:+.5f}")
+
+    return fFS
